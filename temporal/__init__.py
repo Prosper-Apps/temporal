@@ -748,6 +748,18 @@ def any_to_date(date_as_unknown):
 
 	raise TypeError(f"Unhandled type ({type(date_as_unknown)}) for argument to function any_to_date()")
 
+
+def timedelta_to_time(any_timedelta):
+	"""
+	Convert a timedelta to a time, by treating it as simple offset from midnight.
+	"""
+	return datetime.time(
+		(any_timedelta.seconds // 3600),
+		(any_timedelta.seconds % 3600) // 60,
+		(any_timedelta.seconds % 60)
+	)
+
+
 def any_to_time(generic_time):
 	"""
 	Given an argument of a generic, unknown Type, try to return a Time.
@@ -759,6 +771,8 @@ def any_to_time(generic_time):
 			return timestr_to_time(generic_time)
 		if isinstance(generic_time, datetime.time):
 			return generic_time
+		if isinstance(generic_time, timedelta):
+			return timedelta_to_time(generic_time)
 
 	except dateutil.parser._parser.ParserError as ex:  # pylint: disable=protected-access
 		raise ValueError(f"'{generic_time}' is not a valid Time string.") from ex
