@@ -104,9 +104,15 @@ class TDate():
 		return (self.date.toordinal() % 7) + 1  # Sunday being the 1st day of week
 
 	def day_of_week_shortname(self):
+		"""
+		Example: Tue
+		"""
 		return WEEKDAYS_SUN0[self.day_of_week_int() - 1]['name_short']
 
 	def day_of_week_longname(self):
+		"""
+		Example: Tuesday
+		"""
 		return WEEKDAYS_SUN0[self.day_of_week_int() - 1]['name_long']
 
 	def day_of_month(self):
@@ -591,12 +597,16 @@ def week_to_weekkey(year, week_number):
 def get_week_by_weeknum(year, week_number):
 	"""  Returns a class Week. """
 	week_dict = temporal_redis.read_single_week(year, week_number, )
+
 	if not week_dict:
-		print(f"Warning: No value in Redis for year {year}, week number {week_number}.  Rebuilding...")
+		frappe.msgprint(f"Warning: No value in Redis for year {year}, week number {week_number}.  Rebuilding...", to_console=True)
 		Builder.build_all()
 		if (not week_dict) and frappe.db.get_single_value('Temporal Manager', 'debug_mode'):
 			raise KeyError(f"WARNING: Unable to find Week in Redis for year {year}, week {week_number}.")
-		return None
+		week_dict = temporal_redis.read_single_week(year, week_number, )
+
+	if not week_dict:
+		raise RuntimeError("Unable to fetch a Week from the cache database (Redis)")
 
 	return Week(week_dict['year'],
 	            week_dict['week_number'],
@@ -926,22 +936,6 @@ def timestr_to_time(time_as_string):
 # Weekdays
 # ----------------
 
-def next_weekday_after_date(weekday, any_date):
-	"""
-	Find the next day of week (MON, SUN, etc) after a target date.
-	"""
-	weekday_int = None
-	if isinstance(weekday, int):
-		weekday_int = weekday
-	elif isinstance(weekday, str):
-		weekday_int = weekday_int_from_name(weekday, first_day_of_week='MON')  # Monday-based math below
-
-	days_ahead = weekday_int - any_date.weekday()
-	if days_ahead <= 0:  # Target day already happened this week
-		days_ahead += 7
-	return any_date + datetime.timedelta(days_ahead)
-
-
 def validate_datatype(argument_name, argument_value, expected_type, mandatory=False):
 	"""
 	A helpful generic function for checking a variable's datatype, and throwing an error on mismatches.
@@ -973,6 +967,24 @@ def validate_datatype(argument_name, argument_value, expected_type, mandatory=Fa
 
 	# Otherwise, return the argument to the caller.
 	return argument_value
+
+
+def next_weekday_after_date(weekday, any_date):
+	"""
+	Find the next day of week (MON, SUN, etc) after a target date.
+	"""
+	validate_datatype("any_date", any_date, dtdate, True)
+
+	weekday_int = None
+	if isinstance(weekday, int):
+		weekday_int = weekday
+	elif isinstance(weekday, str):
+		weekday_int = weekday_int_from_name(weekday, first_day_of_week='MON')  # Monday-based math below
+
+	days_ahead = weekday_int - any_date.weekday()
+	if days_ahead <= 0:  # Target day already happened this week
+		days_ahead += 7
+	return any_date + datetime.timedelta(days_ahead)
 
 
 def weekday_string_to_shortname(weekday_string):
