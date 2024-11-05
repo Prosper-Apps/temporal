@@ -243,8 +243,8 @@ class Builder():
 	def build_all(epoch_year=None, end_year=None, start_of_week='SUN'):
 		""" Rebuild all Temporal cache key-values. """
 		instance = Builder(epoch_year=epoch_year,
-		                   end_year=end_year,
-		                   start_of_week=start_of_week)
+						   end_year=end_year,
+						   start_of_week=start_of_week)
 
 		instance.build_weeks()  # must happen first, so we can build years more-easily.
 		instance.build_years()
@@ -545,9 +545,9 @@ def calc_future_dates(epoch_date, multiple_of_days, earliest_result_date, qty_of
 		Returns: A List of Dates
 
 		Arguments
-		epoch_date:           The date from which the calculation begins.
-		multiple_of_days:     In every iteration, how many days do we move forward?
-		no_earlier_than:      What is earliest result date we want to see?
+		epoch_date:		   The date from which the calculation begins.
+		multiple_of_days:	 In every iteration, how many days do we move forward?
+		no_earlier_than:	  What is earliest result date we want to see?
 		qty_of_result_dates:  How many qualifying dates should this function return?
 	"""
 	validate_datatype('epoch_date', epoch_date, dtdate, True)
@@ -609,10 +609,10 @@ def get_week_by_weeknum(year, week_number):
 		raise RuntimeError("Unable to fetch a Week from the cache database (Redis)")
 
 	return Week(week_dict['year'],
-	            week_dict['week_number'],
-	            week_dict['week_dates'],
-	            week_dict['week_start'],
-	            week_dict['week_end'])
+				week_dict['week_number'],
+				week_dict['week_dates'],
+				week_dict['week_start'],
+				week_dict['week_end'])
 
 
 def get_week_by_anydate(any_date):
@@ -1046,3 +1046,35 @@ def make_ordinal(some_integer) -> str:
 	else:
 		suffix = ['th', 'st', 'nd', 'rd', 'th'][min(some_integer % 10, 4)]
 	return str(some_integer) + suffix
+
+
+class TimeRange():
+	def __init__(self, start, end):
+		self.start = start
+		self.end = end
+		self.duration = self.end - self.start
+
+	def is_overlapped(self, time_range):
+		if max(self.start, time_range.start) < min(self.end, time_range.end):
+			return True
+		else:
+			return False
+
+	def get_overlapped_range(self, time_range):
+		if not self.is_overlapped(time_range):
+			return
+
+		if time_range.start >= self.start:
+			if self.end >= time_range.end:
+				return TimeRange(time_range.start, time_range.end)
+			else:
+				return TimeRange(time_range.start, self.end)
+		elif time_range.start < self.start:
+			if time_range.end >= self.end:
+				return TimeRange(self.start, self.end)
+			else:
+				return TimeRange(self.start, time_range.end)
+
+	def __repr__(self):
+		return '{0} ------> {1}'.format(*[time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(d))
+										  for d in [self.start, self.end]])

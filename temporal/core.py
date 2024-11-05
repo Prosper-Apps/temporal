@@ -5,7 +5,7 @@
 # ========
 
 import sys
-from datetime import datetime
+from datetime import datetime as DateTimeType
 
 if sys.version_info.minor < 9:
 	import pytz  # https://pypi.org/project/pytz/
@@ -23,7 +23,7 @@ def is_datetime_naive(any_datetime):
 	"""
 	Returns True if the datetime is missing a Time Zone component.
 	"""
-	if not isinstance(any_datetime, datetime):
+	if not isinstance(any_datetime, DateTimeType):
 		raise TypeError("Argument 'any_datetime' must be a Python datetime object.")
 
 	if any_datetime.tzinfo is None:
@@ -45,14 +45,21 @@ def get_system_timezone():
 	# Python 3.9 or greater
 	return ZoneInfo(system_time_zone)
 
+def get_utc_datetime_now() -> DateTimeType:
+	"""
+	Return the current UTC datetime.
+	"""
+	if sys.version_info.minor < 9:
+		return DateTimeType.now(tzutc())
+	return DateTimeType.now(ZoneInfo("UTC"))
 
 def get_system_datetime_now():
 	if sys.version_info.minor < 9:
 		# Python 3.8 or less:
-		utc_datetime = datetime.now(tzutc())  # Get the current UTC datetime.
+		utc_datetime = DateTimeType.now(tzutc())  # Get the current UTC datetime.
 	else:
 		# Python 3.9 or greater
-		utc_datetime = datetime.now(ZoneInfo("UTC"))  # Get the current UTC datetime.
+		utc_datetime = DateTimeType.now(ZoneInfo("UTC"))  # Get the current UTC datetime.
 	return utc_datetime.astimezone( get_system_timezone())  # Convert to the site's Time Zone:
 
 
@@ -60,7 +67,7 @@ def get_system_date():
 	return get_system_datetime_now().date()
 
 
-def datetime_to_sql_datetime(any_datetime: datetime):
+def datetime_to_sql_datetime(any_datetime: DateTimeType):
 	"""
 	Convert a Python DateTime into a DateTime that can be written to MariaDB/MySQL.
 	"""
